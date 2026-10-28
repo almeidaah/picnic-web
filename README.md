@@ -34,6 +34,24 @@ Please report issues in the [Github issues section](https://github.com/MRVDH/pic
 
 Clone or download the repo, run `npm install`, `npm run build` and then `npm run start`.
 
+#### How do I search in Portuguese?
+
+Set `LIBRETRANSLATE_URL` and `LIBRETRANSLATE_API_KEY` in `.env` to enable translation.
+The example URL is LibreTranslate's hosted `/translate` endpoint; get its key from the
+LibreTranslate portal. If either value is empty, the app does not call the translation
+service. Both values are server-side only.
+
+The app auto-detects Portuguese and translates the query to the language of the selected
+Picnic country before requesting search results or suggestions. Other languages are passed
+to Picnic unchanged. Translation failures fall back to the original query.
+
+LibreTranslate can be self-hosted as free/open-source software. Managed or public
+instances may require an API key or have usage limits. Search terms are sent to the
+configured translation provider, but Picnic credentials are not.
+
+Run the translation unit tests with `npm test`. For a live check, configure the endpoint,
+run `npm run dev`, sign in to a Picnic account, and search for a Portuguese product name.
+
 #### How do I generate an auth key?
 
 There's a small CLI for it. Copy `.env.example` to `.env`, fill in your Picnic email, password and country code (`NL`, `DE` or `FR`), then run `npm run auth-key`. If your account has 2FA enabled it asks for the SMS code and prints the auth key when done.

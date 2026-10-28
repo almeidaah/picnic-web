@@ -5,6 +5,7 @@ import { readAuthToken, readCountryCode } from "@/lib/core/auth";
 import { buildPicnicClient } from "@/lib/core/picnic-client";
 import type { ApiErrorResponse, SearchApiResponse } from "@/lib/core/types";
 import { mapSearchSections } from "@/lib/product/map-product-tile";
+import { translateSearchQuery } from "@/lib/search/translate-query";
 
 /**
  * GET /api/search?q=<query>
@@ -35,8 +36,9 @@ export async function GET(
 
   try {
     const client = buildPicnicClient(token, countryCode);
+    const picnicQuery = await translateSearchQuery(query, countryCode);
 
-    const results = await client.catalog.getSearchResults(query);
+    const results = await client.catalog.getSearchResults(picnicQuery);
     const { products, sections } = mapSearchSections(results.products);
 
     return NextResponse.json({ products, sections, query });

@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test tests/search-query-translation.test.mjs",
     "auth-key": "node src/generate-auth-key.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
