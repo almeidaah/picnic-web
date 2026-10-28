@@ -1,76 +1,56 @@
-import type { CountryCode } from "@/lib/core/types";
-
-type TranslationPayload = {
-  detectedLanguage?: { language?: unknown };
-  translatedText?: unknown;
+type MyMemoryPayload = {
+  responseData?: {
+    translatedText?: unknown;
+  };
+  responseStatus?: unknown;
 };
 
 type TranslatorOptions = {
-  endpoint?: string;
-  apiKey?: string;
   fetchImpl?: typeof fetch;
 };
 
-const TARGET_LANGUAGE: Record<CountryCode, string> = {
-  NL: "nl",
-  DE: "de",
-  FR: "fr",
-};
-
+const MYMEMORY_ENDPOINT = "https://api.mymemory.translated.net/get";
+const MAX_QUERY_BYTES = 500;
 const MAX_CACHE_ENTRIES = 256;
 const REQUEST_TIMEOUT_MS = 3000;
 
-export function createSearchQueryTranslator({
-  endpoint,
-  apiKey,
-  fetchImpl = fetch,
-}: TranslatorOptions) {
-  const cache = new Map<string, string>();
+export function createPortugueseToDutchTranslator({ fetchImpl = fetch }: TranslatorOptions = {}) {
+  const cache = new Map<string, string | null>();
 
-  return async function translateSearchQuery(
-    query: string,
-    countryCode: CountryCode
-  ): Promise<string> {
-    const translationEndpoint = endpoint?.trim();
-    const translationApiKey = apiKey?.trim();
-    if (!translationEndpoint || !translationApiKey || query.trim() === "") return query;
+  return async function translatePortugueseToDutch(query: string): Promise<string | null> {
+    const trimmedQuery = query.trim();
+    if (
+      trimmedQuery.length < 3 ||
+      new TextEncoder().encode(trimmedQuery).length > MAX_QUERY_BYTES
+    ) {
+      return null;
+    }
 
-    const target = TARGET_LANGUAGE[countryCode];
-    const cacheKey = `${target}:${query}`;
-    const cachedQuery = cache.get(cacheKey);
-    if (cachedQuery !== undefined) return cachedQuery;
+    if (cache.has(trimmedQuery)) return cache.get(trimmedQuery) ?? null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      const response = await fetchImpl(translationEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          q: query,
-          source: "auto",
-          target,
-          format: "text",
-          api_key: translationApiKey,
-        }),
-        signal: controller.signal,
-      });
+      const url = new URL(MYMEMORY_ENDPOINT);
+      url.searchParams.set("q", trimmedQuery);
+      url.searchParams.set("langpair", "pt|nl");
 
-      if (!response.ok) return query;
+      const response = await fetchImpl(url, { signal: controller.signal });
+      if (!response.ok) return null;
 
       const payload: unknown = await response.json();
-      if (!isTranslationPayload(payload)) return query;
+      if (!isMyMemoryPayload(payload) || payload.responseStatus !== 200) return null;
 
-      const detectedLanguage = payload.detectedLanguage?.language;
-      const translatedText = payload.translatedText;
-      const result =
-        typeof detectedLanguage === "string" && ["pt", "pb"].includes(detectedLanguage) &&
+      const translatedText = payload.responseData?.translatedText;
+      const translation =
         typeof translatedText === "string" && translatedText.trim() !== ""
           ? translatedText.trim()
-          : query;
+          : null;
+      const result =
+        translation?.toLocaleLowerCase() === trimmedQuery.toLocaleLowerCase() ? null : translation;
 
-      cache.set(cacheKey, result);
+      cache.set(trimmedQuery, result);
       if (cache.size > MAX_CACHE_ENTRIES) {
         const oldestKey = cache.keys().next().value;
         if (oldestKey !== undefined) cache.delete(oldestKey);
@@ -78,20 +58,15 @@ export function createSearchQueryTranslator({
 
       return result;
     } catch {
-      return query;
+      return null;
     } finally {
       clearTimeout(timeout);
     }
   };
 }
 
-function isTranslationPayload(value: unknown): value is TranslationPayload {
+function isMyMemoryPayload(value: unknown): value is MyMemoryPayload {
   return typeof value === "object" && value !== null;
 }
 
-const configuredTranslator = createSearchQueryTranslator({
-  endpoint: process.env.LIBRETRANSLATE_URL,
-  apiKey: process.env.LIBRETRANSLATE_API_KEY,
-});
-
-export const translateSearchQuery = configuredTranslator;
+export const translatePortugueseToDutch = createPortugueseToDutchTranslator();

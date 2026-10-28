@@ -85,10 +85,11 @@ and forks, and it still stays readable until then.
 - `npm run dev` — start the dev server
 - `npm run build` / `npm run start` — production build and serve
 - `npm run lint` — ESLint (eslint-config-next, core-web-vitals + TS)
+- `npm test` — focused Node.js test suite
 - `npm run format` / `npm run format:check` — Prettier
 - `npm run auth-key` — CLI to generate a Picnic auth key (see README)
 
-There is no test suite. Verify changes with `npm run lint` and a build.
+Verify changes with `npm test`, `npm run lint`, and a build.
 
 ## Code style
 
@@ -99,7 +100,8 @@ relative), so don't hand-order imports. Run `npm run format` before committing.
 
 ## Environment
 
-The app itself needs no env file: it authenticates per user via the
-`picnic_auth_token` cookie. The `.env` is only for the `npm run auth-key` CLI.
-To use it, copy `.env.example` to `.env` and set `PICNIC_EMAIL`,
+The app authenticates per user via the `picnic_auth_token` cookie. Portuguese
+search fallback uses MyMemory's anonymous translation API and needs no API key
+or environment variable. The `.env` is only required for the `npm run auth-key`
+CLI. To use it, copy `.env.example` to `.env` and set `PICNIC_EMAIL`,
 `PICNIC_PASSWORD`, and `COUNTRY_CODE` (`NL`, `DE`, or `FR`).

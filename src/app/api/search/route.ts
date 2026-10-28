@@ -5,7 +5,7 @@ import { readAuthToken, readCountryCode } from "@/lib/core/auth";
 import { buildPicnicClient } from "@/lib/core/picnic-client";
 import type { ApiErrorResponse, SearchApiResponse } from "@/lib/core/types";
 import { mapSearchSections } from "@/lib/product/map-product-tile";
-import { translateSearchQuery } from "@/lib/search/translate-query";
+import { translatePortugueseToDutch } from "@/lib/search/translate-query";
 
 /**
  * GET /api/search?q=<query>
@@ -36,10 +36,21 @@ export async function GET(
 
   try {
     const client = buildPicnicClient(token, countryCode);
-    const picnicQuery = await translateSearchQuery(query, countryCode);
+    let results = await client.catalog.getSearchResults(query);
+    let { products, sections } = mapSearchSections(results.products);
 
-    const results = await client.catalog.getSearchResults(picnicQuery);
-    const { products, sections } = mapSearchSections(results.products);
+    if (products.length === 0) {
+      const translatedQuery = await translatePortugueseToDutch(query);
+      if (translatedQuery) {
+        try {
+          results = await client.catalog.getSearchResults(translatedQuery);
+          ({ products, sections } = mapSearchSections(results.products));
+        } catch (error) {
+          if (isApiAuthError(error)) throw error;
+          console.error("[/api/search] Translated search failed:", error);
+        }
+      }
+    }
 
     return NextResponse.json({ products, sections, query });
   } catch (error) {

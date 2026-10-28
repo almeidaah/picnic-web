@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSearchQueryTranslator } from "../src/lib/search/translate-query.ts";
+import { createPortugueseToDutchTranslator } from "../src/lib/search/translate-query.ts";
 
 function createResponse(payload, status = 200) {
   return {
@@ -10,119 +10,72 @@ function createResponse(payload, status = 200) {
   };
 }
 
-test("translates detected Portuguese into the active Picnic country language", async () => {
+test("requests an anonymous Portuguese-to-Dutch translation", async () => {
   let request;
-  const translate = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
+  const translate = createPortugueseToDutchTranslator({
     fetchImpl: async (url, options) => {
-      request = { url, options };
+      request = { url: new URL(url), options };
       return createResponse({
-        detectedLanguage: { language: "pt" },
-        translatedText: "gecondenseerde melk",
+        responseData: { translatedText: "gecondenseerde melk" },
+        responseStatus: 200,
       });
     },
   });
 
-  assert.equal(await translate("leite condensado", "NL"), "gecondenseerde melk");
-  assert.equal(request.url, "https://translator.example/translate");
-  assert.deepEqual(JSON.parse(request.options.body), {
-    q: "leite condensado",
-    source: "auto",
-    target: "nl",
-    format: "text",
-    api_key: "test-key",
-  });
+  assert.equal(await translate("leite condensado"), "gecondenseerde melk");
+  assert.equal(
+    request.url.origin + request.url.pathname,
+    "https://api.mymemory.translated.net/get"
+  );
+  assert.equal(request.url.searchParams.get("q"), "leite condensado");
+  assert.equal(request.url.searchParams.get("langpair"), "pt|nl");
+  assert.equal(request.options.method, undefined);
+  assert.equal(request.options.headers, undefined);
 });
 
-test("keeps non-Portuguese searches unchanged", async () => {
-  const translate = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
-    fetchImpl: async () =>
-      createResponse({
-        detectedLanguage: { language: "en" },
-        translatedText: "apple",
-      }),
-  });
-
-  assert.equal(await translate("apples", "NL"), "apples");
-});
-
-test("uses the selected Picnic market language", async () => {
-  const requestedTargets = [];
-  const translate = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
-    fetchImpl: async (_url, options) => {
-      requestedTargets.push(JSON.parse(options.body).target);
-      return createResponse({
-        detectedLanguage: { language: "pb" },
-        translatedText: "translated term",
-      });
-    },
-  });
-
-  await translate("produto", "DE");
-  await translate("fruta", "FR");
-
-  assert.deepEqual(requestedTargets, ["de", "fr"]);
-});
-
-test("returns the original query when translation is disabled or unavailable", async () => {
+test("does not call MyMemory for empty or oversized queries", async () => {
   let requests = 0;
-  const disabledTranslator = createSearchQueryTranslator({
+  const translate = createPortugueseToDutchTranslator({
     fetchImpl: async () => {
       requests += 1;
       return createResponse({});
     },
-  });
-  const missingKeyTranslator = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    fetchImpl: async () => {
-      requests += 1;
-      return createResponse({});
-    },
-  });
-  const unavailableTranslator = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
-    fetchImpl: async () => createResponse({}, 503),
   });
 
-  assert.equal(await disabledTranslator("pao", "NL"), "pao");
-  assert.equal(await missingKeyTranslator("pao", "NL"), "pao");
-  assert.equal(await unavailableTranslator("pao", "NL"), "pao");
+  assert.equal(await translate("  "), null);
+  assert.equal(await translate("de"), null);
+  assert.equal(await translate("a".repeat(501)), null);
   assert.equal(requests, 0);
 });
 
-test("caches provider results for repeated search and suggestion queries", async () => {
+test("caches anonymous translations for repeated queries", async () => {
   let requests = 0;
-  const translate = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
+  const translate = createPortugueseToDutchTranslator({
     fetchImpl: async () => {
       requests += 1;
       return createResponse({
-        detectedLanguage: { language: "pt" },
-        translatedText: "brood",
+        responseData: { translatedText: "brood" },
+        responseStatus: 200,
       });
     },
   });
 
-  assert.equal(await translate("pao", "NL"), "brood");
-  assert.equal(await translate("pao", "NL"), "brood");
+  assert.equal(await translate("pao"), "brood");
+  assert.equal(await translate("pao"), "brood");
   assert.equal(requests, 1);
 });
 
-test("returns the original query when the provider request fails", async () => {
-  const translate = createSearchQueryTranslator({
-    endpoint: "https://translator.example/translate",
-    apiKey: "test-key",
+test("returns null when the provider request fails or has no translation", async () => {
+  const unavailableTranslator = createPortugueseToDutchTranslator({
     fetchImpl: async () => {
       throw new Error("provider unavailable");
     },
   });
+  const invalidResponseTranslator = createPortugueseToDutchTranslator({
+    fetchImpl: async () =>
+      createResponse({ responseData: { translatedText: "pao" }, responseStatus: 200 }),
+  });
 
-  assert.equal(await translate("azeite", "NL"), "azeite");
+  assert.equal(await unavailableTranslator("azeite"), null);
+  assert.equal(await invalidResponseTranslator("pao"), null);
 });

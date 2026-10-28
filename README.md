@@ -36,21 +36,17 @@ Clone or download the repo, run `npm install`, `npm run build` and then `npm run
 
 #### How do I search in Portuguese?
 
-Set `LIBRETRANSLATE_URL` and `LIBRETRANSLATE_API_KEY` in `.env` to enable translation.
-The example URL is LibreTranslate's hosted `/translate` endpoint; get its key from the
-LibreTranslate portal. If either value is empty, the app does not call the translation
-service. Both values are server-side only.
+No configuration or API key is needed. If Picnic returns no products or suggestions,
+the app tries translating the query from Portuguese to Dutch with the
+[MyMemory API](https://mymemory.translated.net/doc/spec.php), then retries Picnic.
+Original Picnic results are kept when translation is unavailable or fails.
 
-The app auto-detects Portuguese and translates the query to the language of the selected
-Picnic country before requesting search results or suggestions. Other languages are passed
-to Picnic unchanged. Translation failures fall back to the original query.
+MyMemory's free anonymous tier is limited to 5,000 characters per day. Search terms
+are sent to MyMemory only for this fallback; Picnic credentials are not. See the
+[usage limits](https://mymemory.translated.net/doc/usagelimits.php).
 
-LibreTranslate can be self-hosted as free/open-source software. Managed or public
-instances may require an API key or have usage limits. Search terms are sent to the
-configured translation provider, but Picnic credentials are not.
-
-Run the translation unit tests with `npm test`. For a live check, configure the endpoint,
-run `npm run dev`, sign in to a Picnic account, and search for a Portuguese product name.
+Run the translation unit tests with `npm test`. For a live check, sign in to a Picnic
+account and search for a Portuguese product name.
 
 #### How do I generate an auth key?
 

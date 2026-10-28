@@ -4,7 +4,7 @@ import { isApiAuthError } from "@/lib/core/api-error";
 import { readAuthToken, readCountryCode } from "@/lib/core/auth";
 import { buildPicnicClient } from "@/lib/core/picnic-client";
 import type { ApiErrorResponse, SearchSuggestion, SuggestionsApiResponse } from "@/lib/core/types";
-import { translateSearchQuery } from "@/lib/search/translate-query";
+import { translatePortugueseToDutch } from "@/lib/search/translate-query";
 
 /**
  * GET /api/suggestions?q=<query>
@@ -33,9 +33,20 @@ export async function GET(
 
   try {
     const client = buildPicnicClient(token, countryCode);
-    const picnicQuery = await translateSearchQuery(query, countryCode);
-    const rawSuggestions: Array<{ id: string; suggestion: string }> =
-      await client.catalog.getSuggestions(picnicQuery);
+    let rawSuggestions: Array<{ id: string; suggestion: string }> =
+      await client.catalog.getSuggestions(query);
+
+    if (rawSuggestions.length === 0) {
+      const translatedQuery = await translatePortugueseToDutch(query);
+      if (translatedQuery) {
+        try {
+          rawSuggestions = await client.catalog.getSuggestions(translatedQuery);
+        } catch (error) {
+          if (isApiAuthError(error)) throw error;
+          console.error("[/api/suggestions] Translated suggestions failed:", error);
+        }
+      }
+    }
 
     const suggestions: SearchSuggestion[] = rawSuggestions.map((s) => ({
       id: s.id,
