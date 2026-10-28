@@ -65,8 +65,26 @@ export function createPortugueseToDutchTranslator({ fetchImpl = fetch }: Transla
   };
 }
 
+type SearchQueryResolverOptions = {
+  enabled: boolean;
+  translate?: (query: string) => Promise<string | null>;
+};
+
+export function createSearchQueryResolver({
+  enabled,
+  translate = translatePortugueseToDutch,
+}: SearchQueryResolverOptions) {
+  return async function resolveSearchQuery(query: string, searchInPortuguese: boolean) {
+    if (!enabled || !searchInPortuguese) return query;
+    return (await translate(query)) ?? query;
+  };
+}
+
 function isMyMemoryPayload(value: unknown): value is MyMemoryPayload {
   return typeof value === "object" && value !== null;
 }
 
 export const translatePortugueseToDutch = createPortugueseToDutchTranslator();
+export const resolveSearchQuery = createSearchQueryResolver({
+  enabled: process.env.NEXT_PUBLIC_PORTUGUESE_SEARCH_ENABLED === "true",
+});

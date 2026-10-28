@@ -9,6 +9,7 @@ export const nl = {
   searchPlaceholder: "Zoek producten...",
   searchAriaLabel: "Zoek producten",
   searchButtonAriaLabel: "Zoeken",
+  searchInPortuguese: "Zoeken in het Portugees",
 
   // Home page errors
   searchError: "Er is iets misgegaan. Probeer het later opnieuw.",

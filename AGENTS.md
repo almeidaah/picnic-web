@@ -101,7 +101,8 @@ relative), so don't hand-order imports. Run `npm run format` before committing.
 ## Environment
 
 The app authenticates per user via the `picnic_auth_token` cookie. Portuguese
-search fallback uses MyMemory's anonymous translation API and needs no API key
-or environment variable. The `.env` is only required for the `npm run auth-key`
-CLI. To use it, copy `.env.example` to `.env` and set `PICNIC_EMAIL`,
-`PICNIC_PASSWORD`, and `COUNTRY_CODE` (`NL`, `DE`, or `FR`).
+search is opt-in via `NEXT_PUBLIC_PORTUGUESE_SEARCH_ENABLED=true` and uses
+MyMemory's anonymous translation API without an API key. The `.env` is only
+required for the `npm run auth-key` CLI. To use it, copy `.env.example` to
+`.env` and set `PICNIC_EMAIL`, `PICNIC_PASSWORD`, and `COUNTRY_CODE`
+(`NL`, `DE`, or `FR`).

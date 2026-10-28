@@ -36,13 +36,15 @@ Clone or download the repo, run `npm install`, `npm run build` and then `npm run
 
 #### How do I search in Portuguese?
 
-No configuration or API key is needed. If Picnic returns no products or suggestions,
-the app tries translating the query from Portuguese to Dutch with the
-[MyMemory API](https://mymemory.translated.net/doc/spec.php), then retries Picnic.
-Original Picnic results are kept when translation is unavailable or fails.
+Set `NEXT_PUBLIC_PORTUGUESE_SEARCH_ENABLED="true"` in `.env` before starting the app to
+show the **Search in Portuguese** checkbox. For production, set it when building the app.
+When checked, searches and suggestions are translated from Portuguese to Dutch with the
+[MyMemory API](https://mymemory.translated.net/doc/spec.php) before calling Picnic. With
+the setting empty or false, the checkbox is hidden and no translation request is made.
+Translation does not require an API key.
 
 MyMemory's free anonymous tier is limited to 5,000 characters per day. Search terms
-are sent to MyMemory only for this fallback; Picnic credentials are not. See the
+are sent to MyMemory only when the checkbox is selected; Picnic credentials are not. See the
 [usage limits](https://mymemory.translated.net/doc/usagelimits.php).
 
 Run the translation unit tests with `npm test`. For a live check, sign in to a Picnic

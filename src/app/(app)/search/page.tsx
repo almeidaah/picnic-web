@@ -51,6 +51,7 @@ function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlQuery = searchParams.get("q") ?? "";
+  const urlPortugueseSearch = searchParams.get("pt") === "1";
 
   const [searchState, setSearchState] = useState<SearchState>({
     status: "idle",
@@ -68,7 +69,7 @@ function SearchPage() {
   const dismissToast = useCallback(() => setToastMessage(null), []);
 
   const handleSearch = useCallback(
-    async (query: string) => {
+    async (query: string, searchInPortuguese: boolean) => {
       const trimmed = query.trim();
 
       if (trimmed === "") {
@@ -80,14 +81,19 @@ function SearchPage() {
       // Only push when the URL doesn't already carry this query —
       // avoids a redundant navigation that can cause useSearchParams
       // to transiently return stale/empty values during the transition.
-      const currentQ = new URLSearchParams(window.location.search).get("q") ?? "";
-      if (currentQ !== trimmed) {
-        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      const currentParams = new URLSearchParams(window.location.search);
+      const searchParams = new URLSearchParams({ q: trimmed });
+      if (searchInPortuguese) searchParams.set("pt", "1");
+      if (
+        currentParams.get("q") !== trimmed ||
+        (currentParams.get("pt") === "1") !== searchInPortuguese
+      ) {
+        router.push(`/search?${searchParams.toString()}`);
       }
       setSearchState({ status: "loading", query: trimmed });
 
       try {
-        const url = `/api/search?q=${encodeURIComponent(trimmed)}`;
+        const url = `/api/search?${searchParams.toString()}`;
         const response = await fetch(url);
         const data: SearchApiResponse | ApiErrorResponse = await response.json();
 
@@ -117,15 +123,14 @@ function SearchPage() {
     [router, t.searchError]
   );
 
-  // Auto-search when the page loads with ?q= or when URL changes (back/forward)
+  // Auto-search when the query or Portuguese-search mode changes in the URL.
   useEffect(() => {
     if (urlQuery) {
-      handleSearch(urlQuery);
+      handleSearch(urlQuery, urlPortugueseSearch);
     } else {
       setSearchState({ status: "idle" });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlQuery]);
+  }, [handleSearch, urlPortugueseSearch, urlQuery]);
 
   // Fetch categories when in idle state (no search query active)
   useEffect(() => {
@@ -161,10 +166,11 @@ function SearchPage() {
         <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
           <div className="mb-8">
             <SearchBar
-              key={urlQuery}
+              key={`${urlQuery}:${urlPortugueseSearch}`}
               onSearch={handleSearch}
               isLoading={searchState.status === "loading"}
               initialQuery={urlQuery}
+              initialPortugueseSearch={urlPortugueseSearch}
             />
           </div>
 

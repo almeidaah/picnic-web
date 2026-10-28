@@ -11,18 +11,26 @@ import { DEBOUNCE_DELAY_MS, MIN_SUGGESTION_LENGTH } from "@/lib/core/types";
 import { SearchSuggestions } from "@/components/search/search-suggestions";
 
 type SearchBarProps = {
-  onSearch: (query: string) => void;
+  onSearch: (query: string, searchInPortuguese: boolean) => void;
   isLoading: boolean;
   initialQuery?: string;
+  initialPortugueseSearch?: boolean;
 };
 
-export function SearchBar({ onSearch, isLoading, initialQuery }: SearchBarProps) {
+export function SearchBar({
+  onSearch,
+  isLoading,
+  initialQuery,
+  initialPortugueseSearch = false,
+}: SearchBarProps) {
   const t = useTranslations();
   const [inputValue, setInputValue] = useState(initialQuery ?? "");
+  const [searchInPortuguese, setSearchInPortuguese] = useState(initialPortugueseSearch);
   const [rawSuggestions, setRawSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const portugueseSearchEnabled = process.env.NEXT_PUBLIC_PORTUGUESE_SEARCH_ENABLED === "true";
   const debouncedInput = useDebounce(inputValue, DEBOUNCE_DELAY_MS);
   const trimmedInput = debouncedInput.trim();
   const shouldFetch = trimmedInput.length >= MIN_SUGGESTION_LENGTH;
@@ -41,7 +49,9 @@ export function SearchBar({ onSearch, isLoading, initialQuery }: SearchBarProps)
 
     async function fetchSuggestions() {
       try {
-        const url = `/api/suggestions?q=${encodeURIComponent(trimmedInput)}`;
+        const params = new URLSearchParams({ q: trimmedInput });
+        if (searchInPortuguese) params.set("pt", "1");
+        const url = `/api/suggestions?${params.toString()}`;
         const response = await fetch(url, { signal: controller.signal });
 
         if (!response.ok) {
@@ -70,7 +80,7 @@ export function SearchBar({ onSearch, isLoading, initialQuery }: SearchBarProps)
     return () => {
       controller.abort();
     };
-  }, [shouldFetch, trimmedInput]);
+  }, [shouldFetch, trimmedInput, searchInPortuguese]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -93,18 +103,18 @@ export function SearchBar({ onSearch, isLoading, initialQuery }: SearchBarProps)
       if (trimmed === "") return;
 
       setShowSuggestions(false);
-      onSearch(trimmed);
+      onSearch(trimmed, searchInPortuguese);
     },
-    [inputValue, onSearch]
+    [inputValue, onSearch, searchInPortuguese]
   );
 
   const handleSuggestionSelect = useCallback(
     (suggestion: string) => {
       setInputValue(suggestion);
       setShowSuggestions(false);
-      onSearch(suggestion);
+      onSearch(suggestion, searchInPortuguese);
     },
-    [onSearch]
+    [onSearch, searchInPortuguese]
   );
 
   return (
@@ -137,6 +147,21 @@ export function SearchBar({ onSearch, isLoading, initialQuery }: SearchBarProps)
           </button>
         </div>
       </form>
+
+      {portugueseSearchEnabled && (
+        <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={searchInPortuguese}
+            onChange={(event) => {
+              setSearchInPortuguese(event.target.checked);
+              setRawSuggestions([]);
+            }}
+            className="accent-picnic-red size-4 rounded border-input-border"
+          />
+          <span>{t.searchInPortuguese}</span>
+        </label>
+      )}
 
       <SearchSuggestions
         suggestions={suggestions}

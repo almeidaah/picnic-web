@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createPortugueseToDutchTranslator } from "../src/lib/search/translate-query.ts";
+import {
+  createPortugueseToDutchTranslator,
+  createSearchQueryResolver,
+} from "../src/lib/search/translate-query.ts";
 
 function createResponse(payload, status = 200) {
   return {
@@ -78,4 +81,28 @@ test("returns null when the provider request fails or has no translation", async
 
   assert.equal(await unavailableTranslator("azeite"), null);
   assert.equal(await invalidResponseTranslator("pao"), null);
+});
+
+test("translates only when Portuguese search is enabled and selected", async () => {
+  let translationRequests = 0;
+  const resolver = createSearchQueryResolver({
+    enabled: true,
+    translate: async () => {
+      translationRequests += 1;
+      return "gecondenseerde melk";
+    },
+  });
+  const disabledResolver = createSearchQueryResolver({
+    enabled: false,
+    translate: async () => {
+      translationRequests += 1;
+      return "gecondenseerde melk";
+    },
+  });
+
+  assert.equal(await resolver("leite condensado", false), "leite condensado");
+  assert.equal(await disabledResolver("leite condensado", true), "leite condensado");
+  assert.equal(translationRequests, 0);
+  assert.equal(await resolver("leite condensado", true), "gecondenseerde melk");
+  assert.equal(translationRequests, 1);
 });

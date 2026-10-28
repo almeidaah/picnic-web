@@ -6,6 +6,7 @@ export const fr = {
   searchPlaceholder: "Rechercher des produits...",
   searchAriaLabel: "Rechercher des produits",
   searchButtonAriaLabel: "Rechercher",
+  searchInPortuguese: "Rechercher en portugais",
 
   // Home page errors
   searchError: "Une erreur s'est produite. Veuillez réessayer plus tard.",
